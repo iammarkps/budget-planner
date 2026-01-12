@@ -25,6 +25,7 @@ export async function getBudgets(month?: string) {
   }
 
   const targetMonth = month ?? new Date().toISOString().slice(0, 7);
+  const targetMonthDate = `${targetMonth}-01`;
 
   const { data, error } = await supabase
     .from("budgets")
@@ -35,7 +36,7 @@ export async function getBudgets(month?: string) {
     `
     )
     .eq("user_id", user.id)
-    .eq("month", targetMonth)
+    .eq("month", targetMonthDate)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -62,7 +63,7 @@ export async function createBudget(input: CreateBudgetInput) {
     .select("id")
     .eq("user_id", user.id)
     .eq("category_id", input.category_id)
-    .eq("month", input.month)
+    .eq("month", `${input.month}-01`)
     .single();
 
   if (existing) {
@@ -73,7 +74,7 @@ export async function createBudget(input: CreateBudgetInput) {
     user_id: user.id,
     category_id: input.category_id,
     amount: input.amount,
-    month: input.month,
+    month: `${input.month}-01`,
     rollover: input.rollover ?? true,
   };
 
@@ -166,7 +167,7 @@ export async function getBudgetWithSpending(month?: string) {
   }
 
   const targetMonth = month ?? new Date().toISOString().slice(0, 7);
-  const startDate = `${targetMonth}-01`;
+  const targetMonthDate = `${targetMonth}-01`;
   const endDate = `${targetMonth}-31`;
 
   // Get budgets for this month
@@ -179,7 +180,7 @@ export async function getBudgetWithSpending(month?: string) {
     `
     )
     .eq("user_id", user.id)
-    .eq("month", targetMonth);
+    .eq("month", targetMonthDate);
 
   if (budgetError) {
     return { error: budgetError.message, data: null };
@@ -191,7 +192,7 @@ export async function getBudgetWithSpending(month?: string) {
     .select("category_id, amount_base_thb")
     .eq("user_id", user.id)
     .eq("type", "expense")
-    .gte("occurred_at", startDate)
+    .gte("occurred_at", targetMonthDate)
     .lte("occurred_at", endDate);
 
   if (txError) {
