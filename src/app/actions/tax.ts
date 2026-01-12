@@ -85,41 +85,6 @@ export async function createTaxDeduction(input: CreateDeductionInput) {
   return { data };
 }
 
-export async function updateTaxDeduction(
-  id: string,
-  input: Partial<CreateDeductionInput>
-) {
-  const supabase = await createSupabaseServerClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { error: "Not authenticated" };
-  }
-
-  const { data, error } = await supabase
-    .from("tax_deductions")
-    .update({
-      name: input.name,
-      category: input.category,
-      cap_amount: input.cap_amount,
-      cap_percent: input.cap_percent,
-      description: input.description,
-    })
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .select()
-    .single();
-
-  if (error) {
-    return { error: error.message };
-  }
-
-  revalidatePath("/tax-planner");
-  return { data };
-}
 
 export async function deleteTaxDeduction(id: string) {
   const supabase = await createSupabaseServerClient();

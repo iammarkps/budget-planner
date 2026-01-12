@@ -13,38 +13,6 @@ export type CreateBudgetInput = {
   rollover?: boolean;
 };
 
-export async function getBudgets(month?: string) {
-  const supabase = await createSupabaseServerClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { error: "Not authenticated", data: null };
-  }
-
-  const targetMonth = month ?? new Date().toISOString().slice(0, 7);
-  const targetMonthDate = `${targetMonth}-01`;
-
-  const { data, error } = await supabase
-    .from("budgets")
-    .select(
-      `
-      *,
-      category:categories(id, name, type)
-    `
-    )
-    .eq("user_id", user.id)
-    .eq("month", targetMonthDate)
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    return { error: error.message, data: null };
-  }
-
-  return { data, error: null };
-}
 
 export async function createBudget(input: CreateBudgetInput) {
   const supabase = await createSupabaseServerClient();
@@ -97,38 +65,6 @@ export async function createBudget(input: CreateBudgetInput) {
   return { data };
 }
 
-export async function updateBudget(
-  id: string,
-  input: { amount?: number; rollover?: boolean }
-) {
-  const supabase = await createSupabaseServerClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { error: "Not authenticated" };
-  }
-
-  const { data, error } = await supabase
-    .from("budgets")
-    .update({
-      amount: input.amount,
-      rollover: input.rollover,
-    })
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .select()
-    .single();
-
-  if (error) {
-    return { error: error.message };
-  }
-
-  revalidatePath("/budgets");
-  return { data };
-}
 
 export async function deleteBudget(id: string) {
   const supabase = await createSupabaseServerClient();
