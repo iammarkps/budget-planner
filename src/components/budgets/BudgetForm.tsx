@@ -19,17 +19,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { createBudget } from "@/app/actions/budgets";
-import type { Database } from "@/../database.types";
+import type { BudgetWithSpending, Category } from "@/types/budget";
 
-type Category = Database["public"]["Tables"]["categories"]["Row"];
 
 type Props = {
   categories: Category[];
   month: string;
-  onSuccess?: () => void;
+  onBudgetAdded?: (budget: BudgetWithSpending) => void;
 };
 
-export default function BudgetForm({ categories, month, onSuccess }: Props) {
+export default function BudgetForm({ categories, month, onBudgetAdded }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,10 +57,19 @@ export default function BudgetForm({ categories, month, onSuccess }: Props) {
       return;
     }
 
+    if (result.data && onBudgetAdded) {
+      // New budget has no spending yet
+      onBudgetAdded({
+        ...result.data,
+        spent: 0,
+        remaining: result.data.amount,
+        percentUsed: 0,
+      });
+    }
+
     setOpen(false);
     setCategoryId("");
     setAmount("");
-    onSuccess?.();
   };
 
   return (

@@ -7,21 +7,13 @@ import { deleteBudget } from "@/app/actions/budgets";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { BudgetWithSpending } from "@/types/budget";
 
-type BudgetWithSpending = {
-  id: string;
-  category_id: string;
-  amount: number;
-  month: string;
-  rollover: boolean;
-  category: { id: string; name: string; type: string } | null;
-  spent: number;
-  remaining: number;
-  percentUsed: number;
-};
+
 
 type BudgetListProps = {
   budgets: BudgetWithSpending[];
+  onBudgetDeleted?: (id: string) => void;
 };
 
 function getProgressBarColor(percentUsed: number): string {
@@ -41,8 +33,7 @@ function formatRemainingText(remaining: number): string {
   return `${Math.abs(remaining).toLocaleString()} THB over budget`;
 }
 
-export default function BudgetList({ budgets: initialBudgets }: BudgetListProps) {
-  const [budgets, setBudgets] = useState(initialBudgets);
+export default function BudgetList({ budgets, onBudgetDeleted }: BudgetListProps) {
   const [deleting, setDeleting] = useState<string | null>(null);
 
   async function handleDelete(id: string) {
@@ -57,7 +48,7 @@ export default function BudgetList({ budgets: initialBudgets }: BudgetListProps)
       return;
     }
 
-    setBudgets((prev) => prev.filter((b) => b.id !== id));
+    onBudgetDeleted?.(id);
     setDeleting(null);
   }
 
