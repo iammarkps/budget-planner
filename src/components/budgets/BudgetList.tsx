@@ -63,6 +63,7 @@ export default function BudgetList({ budgets: initialBudgets }: BudgetListProps)
 
   const totalBudget = budgets.reduce((sum, b) => sum + b.amount, 0);
   const totalSpent = budgets.reduce((sum, b) => sum + b.spent, 0);
+  const totalRemaining = totalBudget - totalSpent;
 
   if (budgets.length === 0) {
     return (
