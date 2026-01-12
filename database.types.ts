@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.1"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       accounts: {
@@ -161,6 +186,84 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      recurring_transactions: {
+        Row: {
+          account_id: string
+          amount: number
+          category_id: string | null
+          created_at: string
+          currency_code: string
+          day_of_month: number | null
+          day_of_week: number | null
+          end_date: string | null
+          frequency: string
+          id: string
+          is_active: boolean
+          merchant: string | null
+          next_occurrence: string
+          note: string | null
+          start_date: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          amount: number
+          category_id?: string | null
+          created_at?: string
+          currency_code?: string
+          day_of_month?: number | null
+          day_of_week?: number | null
+          end_date?: string | null
+          frequency: string
+          id?: string
+          is_active?: boolean
+          merchant?: string | null
+          next_occurrence: string
+          note?: string | null
+          start_date: string
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          category_id?: string | null
+          created_at?: string
+          currency_code?: string
+          day_of_month?: number | null
+          day_of_week?: number | null
+          end_date?: string | null
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          merchant?: string | null
+          next_occurrence?: string
+          note?: string | null
+          start_date?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_transactions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tags: {
         Row: {
@@ -528,6 +631,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
