@@ -309,3 +309,96 @@ export async function getTransactionSummary(month?: string) {
 
   return { data: summary, error: null }
 }
+
+export async function getSpendingByCategory(month?: string) {
+  const supabase = await createSupabaseServerClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: "Not authenticated", data: null }
+  }
+
+  const targetMonth = month ?? new Date().toISOString().slice(0, 7)
+  const startDate = `${targetMonth}-01`
+  const endDate = `${targetMonth}-31`
+
+  const { data, error } = await supabase
+    .from("transactions")
+    .select(`
+      amount_base_thb,
+      category:categories(id, name)
+    `)
+    .eq("user_id", user.id)
+    .eq("type", "expense")
+    .gte("occurred_at", startDate)
+    .lte("occurred_at", endDate)
+
+  if (error) {
+    return { error: error.message, data: null }
+  }
+
+  const categoryMap: Record<string, { name: string; amount: number }> = {}
+
+  for (const tx of data) {
+    const categoryName = tx.category?.name ?? "Uncategorized"
+    if (!categoryMap[categoryName]) {
+      categoryMap[categoryName] = { name: categoryName, amount: 0 }
+    }
+    categoryMap[categoryName].amount += tx.amount_base_thb
+  }
+
+  const result = Object.values(categoryMap).sort((a, b) => b.amount - a.amount)
+
+  return { data: result, error: null }
+}
+
+export async function getMonthlyTrend(months: number = 6) {
+  const supabase = await createSupabaseServerClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: "Not authenticated", data: null }
+  }
+
+  const today = new Date()
+  const result: { month: string; income: number; expense: number }[] = []
+
+  for (let i = months - 1; i >= 0; i--) {
+    const date = new Date(today.getFullYear(), today.getMonth() - i, 1)
+    const monthStr = date.toISOString().slice(0, 7)
+    const startDate = `${monthStr}-01`
+    const endDate = `${monthStr}-31`
+
+    const { data } = await supabase
+      .from("transactions")
+      .select("type, amount_base_thb")
+      .eq("user_id", user.id)
+      .gte("occurred_at", startDate)
+      .lte("occurred_at", endDate)
+
+    let income = 0
+    let expense = 0
+
+    for (const tx of data ?? []) {
+      if (tx.type === "income") {
+        income += tx.amount_base_thb
+      } else {
+        expense += tx.amount_base_thb
+      }
+    }
+
+    result.push({
+      month: date.toLocaleDateString("en-US", { month: "short" }),
+      income,
+      expense,
+    })
+  }
+
+  return { data: result, error: null }
+}

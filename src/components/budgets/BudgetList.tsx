@@ -1,19 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, Pencil, Check, X } from "lucide-react";
 
-import { deleteBudget } from "@/app/actions/budgets";
+import { deleteBudget, updateBudget } from "@/app/actions/budgets";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { BudgetWithSpending } from "@/types/budget";
-
-
 
 type BudgetListProps = {
   budgets: BudgetWithSpending[];
   onBudgetDeleted?: (id: string) => void;
+  onBudgetUpdated?: (budget: BudgetWithSpending) => void;
 };
 
 function getProgressBarColor(percentUsed: number): string {
@@ -33,8 +33,15 @@ function formatRemainingText(remaining: number): string {
   return `${Math.abs(remaining).toLocaleString()} THB over budget`;
 }
 
-export default function BudgetList({ budgets, onBudgetDeleted }: BudgetListProps) {
+export default function BudgetList({
+  budgets,
+  onBudgetDeleted,
+  onBudgetUpdated,
+}: BudgetListProps) {
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editAmount, setEditAmount] = useState("");
+  const [saving, setSaving] = useState(false);
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this budget?")) return;
@@ -50,6 +57,48 @@ export default function BudgetList({ budgets, onBudgetDeleted }: BudgetListProps
 
     onBudgetDeleted?.(id);
     setDeleting(null);
+  }
+
+  function startEdit(budget: BudgetWithSpending) {
+    setEditingId(budget.id);
+    setEditAmount(budget.amount.toString());
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditAmount("");
+  }
+
+  async function saveEdit(budget: BudgetWithSpending) {
+    const newAmount = parseFloat(editAmount);
+    if (isNaN(newAmount) || newAmount <= 0) {
+      alert("Please enter a valid amount");
+      return;
+    }
+
+    setSaving(true);
+    const result = await updateBudget(budget.id, { amount: newAmount });
+
+    if (result.error) {
+      alert(result.error);
+      setSaving(false);
+      return;
+    }
+
+    if (result.data) {
+      // Recalculate spent values
+      const updatedBudget: BudgetWithSpending = {
+        ...result.data,
+        spent: budget.spent,
+        remaining: newAmount - budget.spent,
+        percentUsed: newAmount > 0 ? (budget.spent / newAmount) * 100 : 0,
+      };
+      onBudgetUpdated?.(updatedBudget);
+    }
+
+    setEditingId(null);
+    setEditAmount("");
+    setSaving(false);
   }
 
   const totalBudget = budgets.reduce((sum, b) => sum + b.amount, 0);
@@ -110,6 +159,7 @@ export default function BudgetList({ budgets, onBudgetDeleted }: BudgetListProps
       <div className="space-y-4">
         {budgets.map((budget) => {
           const remainingColor = budget.remaining >= 0 ? "text-green-600" : "text-red-600";
+          const isEditing = editingId === budget.id;
 
           return (
             <div
@@ -128,17 +178,55 @@ export default function BudgetList({ budgets, onBudgetDeleted }: BudgetListProps
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">
-                    {budget.spent.toLocaleString()} / {budget.amount.toLocaleString()} THB
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(budget.id)}
-                    disabled={deleting === budget.id}
-                  >
-                    <Trash2 className="h-4 w-4 text-muted-foreground" />
-                  </Button>
+                  {isEditing ? (
+                    <>
+                      <Input
+                        type="number"
+                        value={editAmount}
+                        onChange={(e) => setEditAmount(e.target.value)}
+                        className="w-28"
+                        min="0"
+                        disabled={saving}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => saveEdit(budget)}
+                        disabled={saving}
+                      >
+                        <Check className="h-4 w-4 text-green-600" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={cancelEdit}
+                        disabled={saving}
+                      >
+                        <X className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-sm text-muted-foreground">
+                        {budget.spent.toLocaleString()} / {budget.amount.toLocaleString()} THB
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => startEdit(budget)}
+                      >
+                        <Pencil className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(budget.id)}
+                        disabled={deleting === budget.id}
+                      >
+                        <Trash2 className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
 

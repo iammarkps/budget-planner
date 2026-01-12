@@ -13,7 +13,69 @@ export type CreateBudgetInput = {
   rollover?: boolean;
 };
 
+import { subMonths, format } from "date-fns";
 
+export async function copyLastMonthBudget(targetMonth: string) {
+  const supabase = await createSupabaseServerClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Not authenticated" };
+  }
+
+  const targetDate = new Date(`${targetMonth}-01`);
+  const lastMonthDate = subMonths(targetDate, 1);
+  const lastMonthStr = format(lastMonthDate, "yyyy-MM");
+
+  // Get budgets from last month
+  const { data: lastMonthBudgets } = await supabase
+    .from("budgets")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("month", `${lastMonthStr}-01`);
+
+  if (!lastMonthBudgets || lastMonthBudgets.length === 0) {
+    return { error: `No budgets found for ${format(lastMonthDate, "MMMM yyyy")}` };
+  }
+
+  // Get budgets already set for this month
+  const { data: currentBudgets } = await supabase
+    .from("budgets")
+    .select("category_id")
+    .eq("user_id", user.id)
+    .eq("month", `${targetMonth}-01`);
+
+  const currentCategoryIds = new Set(
+    (currentBudgets ?? []).map((b) => b.category_id)
+  );
+
+  // Filter budgets to copy (only ones not already set)
+  const budgetsToCopy = lastMonthBudgets
+    .filter((b) => !currentCategoryIds.has(b.category_id))
+    .map((b) => ({
+      user_id: user.id,
+      category_id: b.category_id,
+      amount: b.amount,
+      month: `${targetMonth}-01`,
+      rollover: b.rollover,
+    }));
+
+  if (budgetsToCopy.length === 0) {
+    return { error: "All categories already have budgets for this month" };
+  }
+
+  const { error } = await supabase.from("budgets").insert(budgetsToCopy);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/budgets");
+  return { success: true, count: budgetsToCopy.length };
+}
 export async function createBudget(input: CreateBudgetInput) {
   const supabase = await createSupabaseServerClient();
 
@@ -89,6 +151,43 @@ export async function deleteBudget(id: string) {
 
   revalidatePath("/budgets");
   return { success: true };
+}
+
+export async function updateBudget(
+  id: string,
+  input: { amount?: number; rollover?: boolean }
+) {
+  const supabase = await createSupabaseServerClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Not authenticated" };
+  }
+
+  const updateData: { amount?: number; rollover?: boolean } = {};
+  if (input.amount !== undefined) updateData.amount = input.amount;
+  if (input.rollover !== undefined) updateData.rollover = input.rollover;
+
+  const { data, error } = await supabase
+    .from("budgets")
+    .update(updateData)
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .select(`
+      *,
+      category:categories(id, name, type)
+    `)
+    .single();
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/budgets");
+  return { data };
 }
 
 export async function getBudgetWithSpending(month?: string) {

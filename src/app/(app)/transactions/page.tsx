@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
-import TransactionList from "@/components/transactions/TransactionList";
 import { getTransactions } from "@/app/actions/transactions";
+import TransactionClient from "@/components/transactions/TransactionClient";
 import Link from "next/link";
 
 export default async function TransactionsPage() {
@@ -20,13 +20,11 @@ export default async function TransactionsPage() {
         </Link>
       </header>
 
-      <section className="rounded-xl border bg-card p-6 shadow-sm">
-        {error ? (
-          <p className="text-sm text-destructive">{error}</p>
-        ) : (
-          <TransactionList transactions={transactions ?? []} />
-        )}
-      </section>
+      {error ? (
+        <p className="text-sm text-destructive">{error}</p>
+      ) : (
+        <TransactionClient initialTransactions={transactions ?? []} />
+      )}
     </div>
   );
 }

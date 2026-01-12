@@ -1,7 +1,14 @@
 import Link from "next/link";
 
-import { getTransactionSummary, getTransactions } from "@/app/actions/transactions";
+import {
+  getTransactionSummary,
+  getTransactions,
+  getSpendingByCategory,
+  getMonthlyTrend,
+} from "@/app/actions/transactions";
 import NlTransactionCard from "@/components/transactions/NlTransactionCard";
+import SpendingChart from "@/components/dashboard/SpendingChart";
+import TrendChart from "@/components/dashboard/TrendChart";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -15,13 +22,17 @@ function formatNetAmount(net: number): string {
 }
 
 export default async function DashboardPage() {
-  const [summaryResult, recentResult] = await Promise.all([
+  const [summaryResult, recentResult, spendingResult, trendResult] = await Promise.all([
     getTransactionSummary(),
     getTransactions({ limit: 5 }),
+    getSpendingByCategory(),
+    getMonthlyTrend(6),
   ]);
 
   const summary = summaryResult.data ?? { income: 0, expense: 0, net: 0 };
   const recentTransactions = recentResult.data ?? [];
+  const spendingByCategory = spendingResult.data ?? [];
+  const monthlyTrend = trendResult.data ?? [];
 
   const currentMonth = new Date().toLocaleDateString("en-US", {
     month: "long",
@@ -76,6 +87,26 @@ export default async function DashboardPage() {
             <p className={`text-2xl font-bold ${getAmountColor(summary.net >= 0)}`}>
               {formatNetAmount(summary.net)}
             </p>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Spending by Category</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <SpendingChart data={spendingByCategory} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>6-Month Trend</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TrendChart data={monthlyTrend} />
           </CardContent>
         </Card>
       </section>
