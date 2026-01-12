@@ -3,6 +3,7 @@ import { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/app/actions/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const navLinks = [
   { href: "/dashboard", label: "Dashboard" },
@@ -48,11 +49,14 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
                 {user?.email ? `Signed in as ${user.email}` : "Signed in"}
               </p>
             </div>
-            <form action={signOut}>
-              <Button type="submit" variant="secondary">
-                Sign out
-              </Button>
-            </form>
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <form action={signOut}>
+                <Button type="submit" variant="secondary">
+                  Sign out
+                </Button>
+              </form>
+            </div>
           </header>
           <main className="flex-1 px-6 py-8">{children}</main>
         </div>
