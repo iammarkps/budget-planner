@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { TransactionParsingSkeleton } from "./TransactionParsingSkeleton";
 import type { TransactionSchema } from "@/lib/ai/transactionSchema";
 import {
   saveTransactions,
@@ -22,11 +23,19 @@ import {
 } from "@/app/actions/transactions";
 import type { Database } from "@/../database.types";
 
+const LOADING_MESSAGES = [
+  "Reading your input...",
+  "Understanding the transaction...",
+  "Extracting details...",
+  "Almost there...",
+];
+
 type Account = Database["public"]["Tables"]["accounts"]["Row"];
 type Category = Database["public"]["Tables"]["categories"]["Row"];
 
 export default function NlTransactionCard() {
   const [input, setInput] = useState("");
+  const [pendingInput, setPendingInput] = useState("");
   const [status, setStatus] = useState<
     "idle" | "loading" | "parsed" | "saving" | "saved" | "error"
   >("idle");
@@ -39,6 +48,9 @@ export default function NlTransactionCard() {
   const [suggestedCategory, setSuggestedCategory] = useState<string | null>(null);
   const [isNewCategory, setIsNewCategory] = useState(false);
   const [creatingCategory, setCreatingCategory] = useState(false);
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -59,9 +71,44 @@ export default function NlTransactionCard() {
     loadData();
   }, []);
 
+  // Rotate loading messages while parsing
+  useEffect(() => {
+    if (status !== "loading") {
+      setLoadingMessageIndex(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setLoadingMessageIndex((prev) =>
+        prev < LOADING_MESSAGES.length - 1 ? prev + 1 : prev
+      );
+    }, 1500);
+
+    return () => clearInterval(interval);
+  }, [status]);
+
+  // Cleanup abort controller on unmount
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
+  const handleCancelParsing = useCallback(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setStatus("idle");
+    setPendingInput("");
+    setLoadingMessageIndex(0);
+  }, []);
+
   const handleParse = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!input.trim()) return;
+
+    // Store input for optimistic display and create abort controller
+    setPendingInput(input.trim());
+    abortControllerRef.current = new AbortController();
 
     setStatus("loading");
     setError(null);
@@ -83,6 +130,7 @@ export default function NlTransactionCard() {
             type: c.type,
           })),
         }),
+        signal: abortControllerRef.current.signal,
       });
 
       if (!response.ok) {
@@ -91,6 +139,7 @@ export default function NlTransactionCard() {
 
       const data = (await response.json()) as TransactionSchema;
       setResult(data);
+      setPendingInput("");
       setStatus("parsed");
 
       // Auto-select category if AI suggested one
@@ -114,7 +163,12 @@ export default function NlTransactionCard() {
         }
       }
     } catch (errorCaught) {
+      // Ignore abort errors (user cancelled)
+      if (errorCaught instanceof Error && errorCaught.name === "AbortError") {
+        return;
+      }
       setStatus("error");
+      setPendingInput("");
       setError(
         errorCaught instanceof Error ? errorCaught.message : "Unexpected error"
       );
@@ -199,9 +253,18 @@ export default function NlTransactionCard() {
             onChange={(event) => setInput(event.target.value)}
             disabled={status === "loading" || status === "parsed"}
           />
-          {status !== "parsed" && (
-            <Button type="submit" disabled={status === "loading" || !input.trim()}>
-              {status === "loading" ? "Parsing..." : "Parse"}
+          {status !== "parsed" && status !== "loading" && (
+            <Button type="submit" disabled={!input.trim()}>
+              Parse
+            </Button>
+          )}
+          {status === "loading" && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCancelParsing}
+            >
+              Cancel
             </Button>
           )}
         </form>
@@ -209,6 +272,13 @@ export default function NlTransactionCard() {
         {error && <p className="text-sm text-destructive">{error}</p>}
         {status === "saved" && (
           <p className="text-sm text-green-600">Transaction saved!</p>
+        )}
+
+        {status === "loading" && pendingInput && (
+          <TransactionParsingSkeleton
+            inputText={pendingInput}
+            loadingMessage={LOADING_MESSAGES[loadingMessageIndex]}
+          />
         )}
 
         {result && (status === "parsed" || status === "saving") && (
