@@ -17,7 +17,7 @@ This document describes recommended workflows for common personal finance scenar
 
 Use natural language to record income as it arrives:
 
-```
+```text
 Salary 50000 THB
 Freelance payment 15000 from ClientCo
 Bonus 10000
@@ -48,7 +48,7 @@ For predictable monthly income like salary:
 
 Simply describe what you spent:
 
-```
+```text
 Grab ride 220 THB
 Coffee at Starbucks 185
 Lunch 150
@@ -60,7 +60,7 @@ Electricity bill 1200
 
 Specify when the expense occurred:
 
-```
+```text
 Dinner yesterday 850
 Flight tickets on Jan 15 12500
 Rent for December 15000
@@ -70,7 +70,7 @@ Rent for December 15000
 
 You can enter multiple items in one go:
 
-```
+```text
 Groceries 450, coffee 95, parking 40
 ```
 
@@ -86,7 +86,7 @@ When you pay for a group (e.g., dinner with friends) and expect reimbursement.
 
 When you pay the bill:
 
-```
+```text
 Dinner at Sushi Hiro 1600 THB, paid for Mark and Jane
 ```
 
@@ -96,14 +96,14 @@ This records the full amount as an expense, matching your credit card statement.
 
 When friends pay you back:
 
-```
+```text
 Reimbursement from Mark 530
 Reimbursement from Jane 530
 ```
 
 Or if they pay together:
 
-```
+```text
 Reimbursement 1060 for dinner
 ```
 
@@ -122,7 +122,7 @@ These are automatically detected as income.
 
 Add names in the transaction note for easy searching:
 
-```
+```text
 Group dinner 2400, Mark owes 800, Jane owes 800
 ```
 
@@ -132,7 +132,7 @@ Later, search for "Mark owes" to find outstanding amounts.
 
 If friends pay you immediately (e.g., cash at the restaurant):
 
-```
+```text
 Dinner 400 (my share)
 ```
 
@@ -174,6 +174,7 @@ Since automatic import isn't available yet, here's a manual workflow:
 ### Future Enhancement
 
 A planned feature will allow:
+
 - CSV/PDF statement import
 - Automatic matching with existing transactions
 - Side-by-side reconciliation view
@@ -183,7 +184,8 @@ A planned feature will allow:
 ## Quick Reference: Example Inputs
 
 ### Expenses
-```
+
+```text
 Grab 180
 Lunch at MK 250
 Electricity bill 1450
@@ -192,7 +194,8 @@ Groceries at Tops 890
 ```
 
 ### Income
-```
+
+```text
 Salary 50000
 Freelance from ABC Corp 15000
 Reimbursement 800
@@ -201,7 +204,8 @@ Interest 250
 ```
 
 ### With Context
-```
+
+```text
 Dinner 1600, paid for team
 Coffee yesterday 95
 Flight to Chiang Mai on Feb 1 2500
@@ -209,7 +213,8 @@ Monthly rent 15000
 ```
 
 ### Multiple Items
-```
+
+```text
 BTS 50, lunch 180, coffee 85
 Groceries 500 and household items 350
 ```

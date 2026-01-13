@@ -30,7 +30,12 @@ const LOADING_MESSAGES = [
   "Almost there...",
 ];
 
-const EXAMPLE_TRANSACTIONS = [
+interface ExampleTransaction {
+  text: string;
+  description: string;
+}
+
+const EXAMPLE_TRANSACTIONS: ExampleTransaction[] = [
   { text: "Grab ride 180", description: "Expense" },
   { text: "Salary 50000", description: "Income" },
   { text: "Lunch 350, coffee 95", description: "Multiple" },
