@@ -361,6 +361,7 @@ export default function NlTransactionCard() {
                       setEditedType(value as "income" | "expense");
                       // Reset category when type changes
                       setSelectedCategoryId("");
+                      setIsNewCategory(false);
                     }}
                   >
                     <SelectTrigger id="type">
