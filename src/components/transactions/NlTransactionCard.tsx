@@ -30,6 +30,14 @@ const LOADING_MESSAGES = [
   "Almost there...",
 ];
 
+const EXAMPLE_TRANSACTIONS = [
+  { text: "Grab ride 180", description: "Expense" },
+  { text: "Salary 50000", description: "Income" },
+  { text: "Lunch 350, coffee 95", description: "Multiple" },
+  { text: "Dinner 1600, paid for friends", description: "Split bill" },
+  { text: "Reimbursement 800 from Mark", description: "Payback" },
+];
+
 type Account = Database["public"]["Tables"]["accounts"]["Row"];
 type Category = Database["public"]["Tables"]["categories"]["Row"];
 
@@ -268,6 +276,25 @@ export default function NlTransactionCard() {
             </Button>
           )}
         </form>
+
+        {status === "idle" && !input && (
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">Try an example:</p>
+            <div className="flex flex-wrap gap-2">
+              {EXAMPLE_TRANSACTIONS.map((example) => (
+                <button
+                  key={example.text}
+                  type="button"
+                  onClick={() => setInput(example.text)}
+                  className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs transition-colors hover:bg-muted"
+                >
+                  <span>{example.text}</span>
+                  <span className="text-muted-foreground">({example.description})</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {error && <p className="text-sm text-destructive">{error}</p>}
         {status === "saved" && (
