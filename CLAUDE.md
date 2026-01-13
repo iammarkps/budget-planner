@@ -17,17 +17,27 @@ This CLAUDE.md shapes how Claude approaches this project. Keep it short (aim for
 
 ### Database Operations
 - Never bypass RLS policies - they prevent users from seeing each other's data
-- Schema is in `supabase/schema.sql` - modify there, then regenerate types
+- Schema is in `supabase/schema.sql` - modify there, then regenerate types with `bunx supabase gen types typescript --local > src/database.types.ts`
 - Always filter by `user_id` in queries, even though RLS enforces it (makes intent clear)
 
 ### UI Components
-Available shadcn components to add as needed: select, label, dialog, tabs, table, badge, separator, textarea, checkbox, radio-group, alert, toast, dropdown-menu, popover, calendar, date-picker
+When adding new UI components, use `bunx shadcn@latest add <component-name>` - don't manually copy from docs. Already installed: button, input, card. Available to add: select, label, dialog, tabs, table, badge, separator, textarea, checkbox, radio-group, alert, toast, dropdown-menu, popover, calendar, date-picker
 
-### Commands
+### Development Commands
 ```bash
+# Daily workflow
+bun install      # Install/update dependencies after pulling changes
 bun dev          # Start dev server (port 3000)
-bun build        # Build - must pass before deploying
 bun lint         # ESLint - fix issues before committing
+bun build        # Build - must pass before deploying
+
+# Type checking
+bunx tsc --noEmit  # Check TypeScript errors without building
+
+# Database
+bunx supabase gen types typescript --local > src/database.types.ts  # Regenerate types after schema changes
+bunx supabase db push  # Push local schema to remote (careful!)
+bunx supabase db reset  # Reset local DB and apply migrations
 ```
 
 ## Core Features
@@ -35,6 +45,6 @@ bun lint         # ESLint - fix issues before committing
 2. **Thailand Tax Planning**: Tax brackets and deductions are Thailand-specific - don't use US/EU tax logic (see `lib/tax/`)
 
 ## What Makes This Codebase Different
-- Protected routes are in `app/(app)/` - the group keeps URLs clean while sharing layout
-- Server actions are in `app/actions/` - keep them separate from API routes because they have different error handling
-- Auth uses magic link OTP (no passwords) - don't add password fields
+- **Route Groups**: Protected routes are in `app/(app)/` - the parentheses group routes without affecting URLs, so `/dashboard` not `/(app)/dashboard`. All routes inside share the authenticated layout with sidebar. Auth check happens in `src/proxy.ts` (Next.js 16 renamed middleware to proxy)
+- **Server Actions Location**: Server actions are in `app/actions/` - keep them separate from API routes because server actions throw errors while API routes return Response objects. Different error handling patterns
+- **Magic Link Auth**: Auth uses Supabase magic link OTP (no passwords) - don't add password fields or password reset flows
