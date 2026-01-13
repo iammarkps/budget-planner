@@ -228,6 +228,18 @@ export default function NlTransactionCard() {
       return;
     }
 
+    // Validate date if provided
+    let occurredAt: string | null = null;
+    if (editedDate.trim()) {
+      const parsedDate = Date.parse(editedDate);
+      if (isNaN(parsedDate)) {
+        setError("Please enter a valid date (e.g., YYYY-MM-DD)");
+        return;
+      }
+      // Convert to ISO date format (YYYY-MM-DD)
+      occurredAt = new Date(parsedDate).toISOString().split("T")[0];
+    }
+
     setStatus("saving");
     setError(null);
 
@@ -239,7 +251,7 @@ export default function NlTransactionCard() {
       merchant: editedMerchant || null,
       category: result.entries[0]?.category || null,
       account: null,
-      occurred_at: editedDate || null,
+      occurred_at: occurredAt,
       note: editedNote || null,
     };
 
