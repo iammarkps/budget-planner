@@ -66,12 +66,21 @@ export async function POST(request: Request): Promise<Response> {
   const categoryInstructions = buildCategoryInstructions(categories);
   const system = buildSystemPrompt(baseCurrency, defaultAccount, categoryInstructions);
 
-  const result = await generateText({
-    model: "anthropic/claude-sonnet-4.5",
-    system,
-    prompt: input,
-    output: Output.object({ schema: transactionSchema }),
-  });
+  try {
+    const result = await generateText({
+      model: "anthropic/claude-sonnet-4.5",
+      system,
+      prompt: input,
+      output: Output.object({ schema: transactionSchema }),
+      abortSignal: request.signal,
+    });
 
-  return Response.json(result.output);
+    return Response.json(result.output);
+  } catch (error) {
+    // Handle abort gracefully - client disconnected
+    if (error instanceof Error && error.name === "AbortError") {
+      return new Response(null, { status: 499 }); // Client Closed Request
+    }
+    throw error;
+  }
 }
