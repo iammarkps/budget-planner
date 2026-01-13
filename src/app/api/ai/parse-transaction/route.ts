@@ -75,7 +75,12 @@ export async function POST(request: Request): Promise<Response> {
       abortSignal: request.signal,
     });
 
-    return Response.json(result.output);
+    const output = result.experimental_output ?? result.output;
+    if (!output) {
+      return new Response("Failed to parse transaction", { status: 422 });
+    }
+
+    return Response.json(output);
   } catch (error) {
     // Handle abort gracefully - client disconnected
     if (error instanceof Error && error.name === "AbortError") {
