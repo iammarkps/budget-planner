@@ -1,7 +1,7 @@
 # Budget Planner
 
 ## About This File
-This CLAUDE.md shapes how Claude approaches this project. Keep it short (aim for <150 instructions - Claude Code already uses ~50). Focus on project-specific quirks, not general knowledge. When you find yourself correcting Claude twice on the same thing, add it here. Press `#` during sessions to auto-update this file.
+This CLAUDE.md shapes how Claude approaches this project. Keep it short (aim for <150 instructions - Claude Code already uses ~50). Focus on project-specific quirks, not general knowledge. When you find yourself correcting Claude twice on the same thing, add it here.
 
 **Remember**: Good CLAUDE.md = notes for yourself with amnesia. Bad CLAUDE.md = new hire documentation.
 
