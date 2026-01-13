@@ -75,7 +75,8 @@ export async function POST(request: Request): Promise<Response> {
       abortSignal: request.signal,
     });
 
-    const output = result.experimental_output ?? result.output;
+    // AI SDK v6 uses result.output for structured output
+    const output = result.output;
     if (!output) {
       return new Response("Failed to parse transaction", { status: 422 });
     }
