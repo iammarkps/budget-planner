@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { TransactionParsingSkeleton } from "./TransactionParsingSkeleton";
 import type { TransactionSchema } from "@/lib/ai/transactionSchema";
 import {
@@ -49,6 +50,14 @@ export default function NlTransactionCard() {
   const [isNewCategory, setIsNewCategory] = useState(false);
   const [creatingCategory, setCreatingCategory] = useState(false);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+
+  // Editable fields state
+  const [editedType, setEditedType] = useState<"income" | "expense">("expense");
+  const [editedAmount, setEditedAmount] = useState("");
+  const [editedCurrency, setEditedCurrency] = useState("THB");
+  const [editedMerchant, setEditedMerchant] = useState("");
+  const [editedDate, setEditedDate] = useState("");
+  const [editedNote, setEditedNote] = useState("");
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -142,6 +151,16 @@ export default function NlTransactionCard() {
       setPendingInput("");
       setStatus("parsed");
 
+      // Initialize editable fields with parsed values
+      if (data.entries[0]) {
+        setEditedType(data.entries[0].type);
+        setEditedAmount(data.entries[0].amount.toString());
+        setEditedCurrency(data.entries[0].currency);
+        setEditedMerchant(data.entries[0].merchant || "");
+        setEditedDate(data.entries[0].occurred_at || "");
+        setEditedNote(data.entries[0].note || "");
+      }
+
       // Auto-select category if AI suggested one
       if (data.entries[0]?.category) {
         const suggestedName = data.entries[0].category;
@@ -176,12 +195,12 @@ export default function NlTransactionCard() {
   };
 
   const handleCreateCategory = async () => {
-    if (!suggestedCategory || !result?.entries[0]?.type) return;
+    if (!suggestedCategory) return;
 
     setCreatingCategory(true);
     const createResult = await createCategory({
       name: suggestedCategory,
-      type: result.entries[0].type as "income" | "expense",
+      type: editedType,
     });
 
     if (createResult.error) {
@@ -202,11 +221,42 @@ export default function NlTransactionCard() {
   const handleSave = async () => {
     if (!result || !selectedAccountId) return;
 
+    // Validate amount
+    const amount = parseFloat(editedAmount);
+    if (isNaN(amount) || amount <= 0) {
+      setError("Please enter a valid positive amount");
+      return;
+    }
+
+    // Validate date if provided
+    let occurredAt: string | null = null;
+    if (editedDate.trim()) {
+      const parsedDate = Date.parse(editedDate);
+      if (isNaN(parsedDate)) {
+        setError("Please enter a valid date (e.g., YYYY-MM-DD)");
+        return;
+      }
+      // Convert to ISO date format (YYYY-MM-DD)
+      occurredAt = new Date(parsedDate).toISOString().split("T")[0];
+    }
+
     setStatus("saving");
     setError(null);
 
+    // Create edited entry from user's edits
+    const editedEntry = {
+      type: editedType,
+      amount: amount,
+      currency: editedCurrency,
+      merchant: editedMerchant || null,
+      category: result.entries[0]?.category || null,
+      account: null,
+      occurred_at: occurredAt,
+      note: editedNote || null,
+    };
+
     const saveResult = await saveTransactions({
-      entries: result.entries,
+      entries: [editedEntry],
       rawInput: input,
       accountId: selectedAccountId,
       categoryId: selectedCategoryId || null,
@@ -224,6 +274,13 @@ export default function NlTransactionCard() {
     setSuggestedCategory(null);
     setSelectedCategoryId("");
     setIsNewCategory(false);
+    // Reset edited fields
+    setEditedType("expense");
+    setEditedAmount("");
+    setEditedCurrency("THB");
+    setEditedMerchant("");
+    setEditedDate("");
+    setEditedNote("");
     setTimeout(() => setStatus("idle"), 2000);
   };
 
@@ -234,10 +291,17 @@ export default function NlTransactionCard() {
     setSuggestedCategory(null);
     setSelectedCategoryId("");
     setIsNewCategory(false);
+    // Reset edited fields
+    setEditedType("expense");
+    setEditedAmount("");
+    setEditedCurrency("THB");
+    setEditedMerchant("");
+    setEditedDate("");
+    setEditedNote("");
   };
 
-  const filteredCategories = result?.entries[0]?.type
-    ? categories.filter((c) => c.type === result.entries[0].type)
+  const filteredCategories = result
+    ? categories.filter((c) => c.type === editedType)
     : categories;
 
   return (
@@ -283,38 +347,98 @@ export default function NlTransactionCard() {
 
         {result && (status === "parsed" || status === "saving") && (
           <div className="space-y-4">
-            <div className="rounded-md border p-3 space-y-2">
+            <div className="rounded-md border p-3 space-y-3">
               <p className="text-xs font-medium text-muted-foreground uppercase">
-                Parsed Result
+                Transaction Details (Edit as needed)
               </p>
-              {result.entries.map((entry, index) => (
-                <div
-                  key={`${entry.merchant ?? "entry"}-${index}`}
-                  className="flex flex-wrap items-center gap-2 text-sm"
-                >
-                  <Badge variant={entry.type === "income" ? "default" : "secondary"}>
-                    {entry.type}
-                  </Badge>
-                  <span className="font-medium">
-                    {entry.amount.toLocaleString()} {entry.currency}
-                  </span>
-                  {entry.merchant && (
-                    <span className="text-muted-foreground">· {entry.merchant}</span>
-                  )}
-                  {entry.category && (
-                    <Badge
-                      variant="outline"
-                      className={`text-xs ${isNewCategory ? "border-green-500 text-green-600" : ""}`}
-                    >
-                      {entry.category}
-                      {isNewCategory && " (new)"}
-                    </Badge>
-                  )}
-                  {entry.occurred_at && (
-                    <span className="text-muted-foreground">· {entry.occurred_at}</span>
-                  )}
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="type">Type</Label>
+                  <Select
+                    value={editedType}
+                    onValueChange={(value) => {
+                      setEditedType(value as "income" | "expense");
+                      // Reset category when type changes
+                      setSelectedCategoryId("");
+                      setIsNewCategory(false);
+                    }}
+                  >
+                    <SelectTrigger id="type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="income">Income</SelectItem>
+                      <SelectItem value="expense">Expense</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              ))}
+
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Amount</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={editedAmount}
+                    onChange={(e) => setEditedAmount(e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="currency">Currency</Label>
+                  <Select
+                    value={editedCurrency}
+                    onValueChange={setEditedCurrency}
+                  >
+                    <SelectTrigger id="currency">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="THB">THB</SelectItem>
+                      <SelectItem value="USD">USD</SelectItem>
+                      <SelectItem value="EUR">EUR</SelectItem>
+                      <SelectItem value="GBP">GBP</SelectItem>
+                      <SelectItem value="JPY">JPY</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="merchant">Merchant</Label>
+                  <Input
+                    id="merchant"
+                    type="text"
+                    value={editedMerchant}
+                    onChange={(e) => setEditedMerchant(e.target.value)}
+                    placeholder="e.g. Starbucks"
+                  />
+                </div>
+
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="date">Date (YYYY-MM-DD)</Label>
+                  <Input
+                    id="date"
+                    type="text"
+                    value={editedDate}
+                    onChange={(e) => setEditedDate(e.target.value)}
+                    placeholder="e.g. 2026-01-13 or leave blank for today"
+                  />
+                </div>
+
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="note">Note</Label>
+                  <Textarea
+                    id="note"
+                    value={editedNote}
+                    onChange={(e) => setEditedNote(e.target.value)}
+                    placeholder="Optional notes"
+                    rows={2}
+                  />
+                </div>
+              </div>
             </div>
 
             {isNewCategory && suggestedCategory && (
