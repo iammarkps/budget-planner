@@ -10,7 +10,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { formatTooltip } from "@/lib/chart-utils";
+import { formatTooltip, formatYAxis } from "@/lib/chart-utils";
 
 type TrendData = {
   month: string;
@@ -21,9 +21,6 @@ type TrendData = {
 type TrendChartProps = {
   data: TrendData[];
 };
-
-const formatYAxis = (value: number) =>
-  value >= 1000 ? `${(value / 1000).toFixed(0)}k` : String(value);
 
 export default function TrendChart({ data }: TrendChartProps) {
   if (data.length === 0) {

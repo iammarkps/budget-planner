@@ -1,6 +1,6 @@
 "use client";
 
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, type PieLabelRenderProps } from "recharts";
 import { formatTooltip } from "@/lib/chart-utils";
 
 type SpendingData = {
@@ -23,13 +23,11 @@ const COLORS = [
   "#FF6B6B",
 ];
 
-const formatLabel = ({
-  name,
-  percent,
-}: {
-  name?: string;
-  percent?: number;
-}) => `${name ?? ""} ${((percent ?? 0) * 100).toFixed(0)}%`;
+const formatLabel = (props: PieLabelRenderProps): string => {
+  const name = typeof props.name === "string" ? props.name : "";
+  const percent = typeof props.percent === "number" ? props.percent : 0;
+  return `${name} ${(percent * 100).toFixed(0)}%`;
+};
 
 export default function SpendingChart({ data }: SpendingChartProps) {
   if (data.length === 0) {

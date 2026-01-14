@@ -369,7 +369,9 @@ export async function getMonthlyTrend(months: number = 6) {
   const today = new Date()
   const startMonth = new Date(today.getFullYear(), today.getMonth() - months + 1, 1)
   const startDate = startMonth.toISOString().slice(0, 10)
-  const endDate = `${today.toISOString().slice(0, 7)}-31`
+  // Calculate actual last day of current month
+  const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+  const endDate = lastDayOfMonth.toISOString().slice(0, 10)
 
   // Single query for all months instead of N sequential queries
   const { data, error } = await supabase
@@ -394,6 +396,7 @@ export async function getMonthlyTrend(months: number = 6) {
 
   // Aggregate transactions by month in-memory
   for (const tx of data ?? []) {
+    if (!tx.occurred_at) continue
     const monthKey = tx.occurred_at.slice(0, 7)
     const entry = monthMap.get(monthKey)
     if (entry) {
