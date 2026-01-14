@@ -303,6 +303,7 @@ export async function processRecurringTransactions() {
       supabase
         .from("recurring_transactions")
         .update({ is_active: false })
+        .eq("user_id", user.id)
         .in("id", expiredIds),
     );
   }
@@ -318,6 +319,7 @@ export async function processRecurringTransactions() {
       supabase
         .from("recurring_transactions")
         .update({ next_occurrence })
+        .eq("user_id", user.id)
         .eq("id", id),
     );
   }

@@ -372,12 +372,17 @@ export async function getMonthlyTrend(months: number = 6) {
   const endDate = `${today.toISOString().slice(0, 7)}-31`
 
   // Single query for all months instead of N sequential queries
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("transactions")
     .select("type, amount_base_thb, occurred_at")
     .eq("user_id", user.id)
     .gte("occurred_at", startDate)
     .lte("occurred_at", endDate)
+
+  if (error) {
+    console.error("Failed to fetch monthly trend data:", error)
+    return { data: null, error: error.message }
+  }
 
   // Initialize all months with zero values
   const monthMap = new Map<string, { income: number; expense: number }>()

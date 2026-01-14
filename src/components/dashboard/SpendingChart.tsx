@@ -1,6 +1,7 @@
 "use client";
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { formatTooltip } from "@/lib/chart-utils";
 
 type SpendingData = {
   name: string;
@@ -29,9 +30,6 @@ const formatLabel = ({
   name?: string;
   percent?: number;
 }) => `${name ?? ""} ${((percent ?? 0) * 100).toFixed(0)}%`;
-
-const formatTooltip = (value: number | undefined) =>
-  `${(value ?? 0).toLocaleString()} THB`;
 
 export default function SpendingChart({ data }: SpendingChartProps) {
   if (data.length === 0) {
