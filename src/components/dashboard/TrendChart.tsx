@@ -21,6 +21,12 @@ type TrendChartProps = {
   data: TrendData[];
 };
 
+const formatYAxis = (value: number) =>
+  value >= 1000 ? `${(value / 1000).toFixed(0)}k` : String(value);
+
+const formatTooltip = (value: number | undefined) =>
+  `${(value ?? 0).toLocaleString()} THB`;
+
 export default function TrendChart({ data }: TrendChartProps) {
   if (data.length === 0) {
     return (
@@ -35,14 +41,8 @@ export default function TrendChart({ data }: TrendChartProps) {
       <BarChart data={data}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="month" />
-        <YAxis
-          tickFormatter={(value) =>
-            value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value
-          }
-        />
-        <Tooltip
-          formatter={(value) => `${(value as number).toLocaleString()} THB`}
-        />
+        <YAxis tickFormatter={formatYAxis} />
+        <Tooltip formatter={formatTooltip} />
         <Legend />
         <Bar dataKey="income" name="Income" fill="#22C55E" />
         <Bar dataKey="expense" name="Expense" fill="#EF4444" />

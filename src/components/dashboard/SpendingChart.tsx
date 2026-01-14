@@ -22,6 +22,17 @@ const COLORS = [
   "#FF6B6B",
 ];
 
+const formatLabel = ({
+  name,
+  percent,
+}: {
+  name?: string;
+  percent?: number;
+}) => `${name ?? ""} ${((percent ?? 0) * 100).toFixed(0)}%`;
+
+const formatTooltip = (value: number | undefined) =>
+  `${(value ?? 0).toLocaleString()} THB`;
+
 export default function SpendingChart({ data }: SpendingChartProps) {
   if (data.length === 0) {
     return (
@@ -43,15 +54,13 @@ export default function SpendingChart({ data }: SpendingChartProps) {
           fill="#8884d8"
           dataKey="amount"
           nameKey="name"
-          label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
+          label={formatLabel}
         >
           {data.map((_, index) => (
             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
           ))}
         </Pie>
-        <Tooltip
-          formatter={(value) => `${(value as number).toLocaleString()} THB`}
-        />
+        <Tooltip formatter={formatTooltip} />
         <Legend />
       </PieChart>
     </ResponsiveContainer>
