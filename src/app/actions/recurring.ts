@@ -256,55 +256,79 @@ export async function processRecurringTransactions() {
     return { processed: 0 };
   }
 
-  let processed = 0;
+  // Separate items into expired vs active for batched processing
+  type TransactionInsert = Database["public"]["Tables"]["transactions"]["Insert"];
+  const expiredIds: string[] = [];
+  const transactionsToInsert: TransactionInsert[] = [];
+  const updatesToApply: { id: string; next_occurrence: string }[] = [];
 
   for (const recurring of dueRecurring) {
     if (recurring.end_date && recurring.end_date < today) {
-      await supabase
+      expiredIds.push(recurring.id);
+      continue;
+    }
+
+    transactionsToInsert.push({
+      user_id: user.id,
+      account_id: recurring.account_id,
+      category_id: recurring.category_id,
+      type: recurring.type as "income" | "expense",
+      amount_original: recurring.amount,
+      currency_code: recurring.currency_code,
+      amount_base_thb: recurring.amount,
+      rate_used: 1,
+      merchant: recurring.merchant,
+      note: recurring.note
+        ? `[Auto] ${recurring.note}`
+        : "[Auto] Recurring transaction",
+      occurred_at: recurring.next_occurrence,
+    });
+
+    updatesToApply.push({
+      id: recurring.id,
+      next_occurrence: calculateNextAfterCurrent(
+        recurring.frequency,
+        recurring.next_occurrence,
+        recurring.day_of_month,
+      ),
+    });
+  }
+
+  // Execute batched operations in parallel
+  const operations: PromiseLike<unknown>[] = [];
+
+  // Deactivate expired recurring transactions in one query
+  if (expiredIds.length > 0) {
+    operations.push(
+      supabase
         .from("recurring_transactions")
         .update({ is_active: false })
-        .eq("id", recurring.id);
-      continue;
-    }
-
-    const { error: insertError } = await supabase
-      .from("transactions")
-      .insert({
-        user_id: user.id,
-        account_id: recurring.account_id,
-        category_id: recurring.category_id,
-        type: recurring.type as "income" | "expense",
-        amount_original: recurring.amount,
-        currency_code: recurring.currency_code,
-        amount_base_thb: recurring.amount,
-        rate_used: 1,
-        merchant: recurring.merchant,
-        note: recurring.note ? `[Auto] ${recurring.note}` : "[Auto] Recurring transaction",
-        occurred_at: recurring.next_occurrence,
-      });
-
-    if (insertError) {
-      console.error("Failed to create transaction:", insertError);
-      continue;
-    }
-
-    const nextOccurrence = calculateNextAfterCurrent(
-      recurring.frequency,
-      recurring.next_occurrence,
-      recurring.day_of_month,
+        .eq("user_id", user.id)
+        .in("id", expiredIds),
     );
-
-    await supabase
-      .from("recurring_transactions")
-      .update({ next_occurrence: nextOccurrence })
-      .eq("id", recurring.id);
-
-    processed++;
   }
+
+  // Insert all new transactions at once
+  if (transactionsToInsert.length > 0) {
+    operations.push(supabase.from("transactions").insert(transactionsToInsert));
+  }
+
+  // Update next_occurrence for each (parallel updates for different values)
+  for (const { id, next_occurrence } of updatesToApply) {
+    operations.push(
+      supabase
+        .from("recurring_transactions")
+        .update({ next_occurrence })
+        .eq("user_id", user.id)
+        .eq("id", id),
+    );
+  }
+
+  await Promise.all(operations);
 
   revalidatePath("/transactions");
   revalidatePath("/dashboard");
   revalidatePath("/recurring");
 
-  return { processed };
+  return { processed: transactionsToInsert.length };
 }

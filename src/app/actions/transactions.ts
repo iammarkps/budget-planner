@@ -367,38 +367,53 @@ export async function getMonthlyTrend(months: number = 6) {
   }
 
   const today = new Date()
-  const result: { month: string; income: number; expense: number }[] = []
+  const startMonth = new Date(today.getFullYear(), today.getMonth() - months + 1, 1)
+  const startDate = startMonth.toISOString().slice(0, 10)
+  // Calculate actual last day of current month
+  const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+  const endDate = lastDayOfMonth.toISOString().slice(0, 10)
 
+  // Single query for all months instead of N sequential queries
+  const { data, error } = await supabase
+    .from("transactions")
+    .select("type, amount_base_thb, occurred_at")
+    .eq("user_id", user.id)
+    .gte("occurred_at", startDate)
+    .lte("occurred_at", endDate)
+
+  if (error) {
+    console.error("Failed to fetch monthly trend data:", error)
+    return { data: null, error: error.message }
+  }
+
+  // Initialize all months with zero values
+  const monthMap = new Map<string, { income: number; expense: number }>()
   for (let i = months - 1; i >= 0; i--) {
     const date = new Date(today.getFullYear(), today.getMonth() - i, 1)
-    const monthStr = date.toISOString().slice(0, 7)
-    const startDate = `${monthStr}-01`
-    const endDate = `${monthStr}-31`
+    const key = date.toISOString().slice(0, 7)
+    monthMap.set(key, { income: 0, expense: 0 })
+  }
 
-    const { data } = await supabase
-      .from("transactions")
-      .select("type, amount_base_thb")
-      .eq("user_id", user.id)
-      .gte("occurred_at", startDate)
-      .lte("occurred_at", endDate)
-
-    let income = 0
-    let expense = 0
-
-    for (const tx of data ?? []) {
+  // Aggregate transactions by month in-memory
+  for (const tx of data ?? []) {
+    if (!tx.occurred_at) continue
+    const monthKey = tx.occurred_at.slice(0, 7)
+    const entry = monthMap.get(monthKey)
+    if (entry) {
       if (tx.type === "income") {
-        income += tx.amount_base_thb
+        entry.income += tx.amount_base_thb
       } else {
-        expense += tx.amount_base_thb
+        entry.expense += tx.amount_base_thb
       }
     }
-
-    result.push({
-      month: date.toLocaleDateString("en-US", { month: "short" }),
-      income,
-      expense,
-    })
   }
+
+  // Convert to array with formatted month names
+  const result = Array.from(monthMap.entries()).map(([key, value]) => ({
+    month: new Date(key + "-01").toLocaleDateString("en-US", { month: "short" }),
+    income: value.income,
+    expense: value.expense,
+  }))
 
   return { data: result, error: null }
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, type PieLabelRenderProps } from "recharts";
+import { formatTooltip } from "@/lib/chart-utils";
 
 type SpendingData = {
   name: string;
@@ -21,6 +22,12 @@ const COLORS = [
   "#FFC658",
   "#FF6B6B",
 ];
+
+const formatLabel = (props: PieLabelRenderProps): string => {
+  const name = typeof props.name === "string" ? props.name : "";
+  const percent = typeof props.percent === "number" ? props.percent : 0;
+  return `${name} ${(percent * 100).toFixed(0)}%`;
+};
 
 export default function SpendingChart({ data }: SpendingChartProps) {
   if (data.length === 0) {
@@ -43,15 +50,13 @@ export default function SpendingChart({ data }: SpendingChartProps) {
           fill="#8884d8"
           dataKey="amount"
           nameKey="name"
-          label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
+          label={formatLabel}
         >
           {data.map((_, index) => (
             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
           ))}
         </Pie>
-        <Tooltip
-          formatter={(value) => `${(value as number).toLocaleString()} THB`}
-        />
+        <Tooltip formatter={formatTooltip} />
         <Legend />
       </PieChart>
     </ResponsiveContainer>
